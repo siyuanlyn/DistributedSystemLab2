@@ -16,6 +16,8 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.yaml.snakeyaml.Yaml;
 
@@ -73,7 +75,7 @@ class LoggerMessagePasser extends MessagePasser {
 						for (int i = 0; i < list.size(); i++) {
 							sb.append(list.get(i).toString() + " ");
 							LogicalLog ll = list.get(i);
-									
+
 							if(ll.event.equalsIgnoreCase(Function.SEND.toString())){
 								int index = ProcessNo.valueOf(ll.metadata.msgDst.toUpperCase()).ordinal();
 								System.out.println("INFO: dest index" + index);
@@ -86,7 +88,7 @@ class LoggerMessagePasser extends MessagePasser {
 										sb.append(" " + destLog.processName+" ("+destLog.timestamp+")");
 										break;
 									}
-										
+
 								}
 							}
 							sb.append("\n"+ll.metadata.toString()+"\n");
@@ -277,6 +279,8 @@ public class MessagePasser {
 
 	ArrayList<LinkedHashMap<String, String>> receiveRuleList;
 
+	ArrayList<LinkedHashMap<String, String>> multicastGroupList;
+
 	File configurationFile;
 
 	long lastModifiedTime;
@@ -297,18 +301,20 @@ public class MessagePasser {
 
 	boolean log = false;
 
+	Multicast multicast = new Multicast(this);
+
 	public void setClockService(ClockType clockType) {
 		switch (clockType) {
-			case LOGICAL:
-				clockService = Clock.getClockService(LogicalClock.factory);
-				((LogicalClock) clockService).setProcessNo(processNo.value);
-				break;
-			case VECTOR:
-				clockService = Clock.getClockService(VectorClock.factory);
-				((VectorClock) clockService).initializeTimeStamps(processNo.value, processCount);
-				break;
-			default:
-				System.err.println("SET CLOCK SERVICE ERROR. LOGGER SERVER MAY FAIL TO SET UP");
+		case LOGICAL:
+			clockService = Clock.getClockService(LogicalClock.factory);
+			((LogicalClock) clockService).setProcessNo(processNo.value);
+			break;
+		case VECTOR:
+			clockService = Clock.getClockService(VectorClock.factory);
+			((VectorClock) clockService).initializeTimeStamps(processNo.value, processCount);
+			break;
+		default:
+			System.err.println("SET CLOCK SERVICE ERROR. LOGGER SERVER MAY FAIL TO SET UP");
 		}
 	}
 
@@ -325,8 +331,22 @@ public class MessagePasser {
 		configList = (ArrayList<LinkedHashMap<String, String>>) networkTable.get("configuration");
 		sendRuleList = (ArrayList<LinkedHashMap<String, String>>) networkTable.get("sendRules");
 		receiveRuleList = (ArrayList<LinkedHashMap<String, String>>) networkTable.get("receiveRules");
+		multicastGroupList = (ArrayList<LinkedHashMap<String,String>>) networkTable.get("groups");
+		for(Map m : multicastGroupList){
+			String groupNameString = (String)m.get("name");
+			String regex = "[^0-9]";
+			Pattern pattern = Pattern.compile(regex);
+			Matcher matcher = pattern.matcher(groupNameString);
+			int groupNo = Integer.parseInt(matcher.replaceAll("").trim());
+			ArrayList<String> memberList = (ArrayList<String>)m.get("members");
+			multicast.groupMap.put(groupNo, memberList);
+		}
+		for(int x : multicast.groupMap.keySet()){
+			System.out.println(x + " " + multicast.groupMap.get(x).toString());
+		}
 		// System.out.println("INFO: " + sendRuleList.toString());
 		// System.out.println("INFO: " + receiveRuleList.toString());
+		System.out.println("INFO: " + multicastGroupList.toString());
 		this.processCount = configList.size();
 		System.out.println("INFO: The number of processes in configuration file: " + this.processCount);
 		for (Map m : configList) {
@@ -342,23 +362,23 @@ public class MessagePasser {
 
 	public void setProcessNo() {
 		switch (this.local_name.toLowerCase()) {
-			case "alice":
-				this.processNo = ProcessNo.ALICE;
-				break;
-			case "bob":
-				this.processNo = ProcessNo.BOB;
-				break;
-			case "charlie":
-				this.processNo = ProcessNo.CHARLIE;
-				break;
-			case "daphnie":
-				this.processNo = ProcessNo.DAPHNIE;
-				break;
-			case "logger":
-				this.processNo = ProcessNo.LOGGER;
-				break;
-			default:
-				System.err.println("Unknown Process!");
+		case "alice":
+			this.processNo = ProcessNo.ALICE;
+			break;
+		case "bob":
+			this.processNo = ProcessNo.BOB;
+			break;
+		case "charlie":
+			this.processNo = ProcessNo.CHARLIE;
+			break;
+		case "daphnie":
+			this.processNo = ProcessNo.DAPHNIE;
+			break;
+		case "logger":
+			this.processNo = ProcessNo.LOGGER;
+			break;
+		default:
+			System.err.println("Unknown Process!");
 
 		}
 	}
@@ -410,7 +430,7 @@ public class MessagePasser {
 	 */
 	@SuppressWarnings("resource")
 	void clockServiceInit() throws UnknownHostException, IOException,
-			InterruptedException {
+	InterruptedException {
 		if (this.clockType == null) { // clock type is not yet set by logger
 			// send request to logger
 			if (!this.streamMap.containsKey("logger")) { // not connect yet
@@ -458,7 +478,7 @@ public class MessagePasser {
 	}
 
 	void send(Message message) throws UnknownHostException, IOException,
-			InterruptedException {
+	InterruptedException {
 		reconfiguration();
 		this.function = Function.SEND;
 		if (this.clockType == ClockType.LOGICAL) {
@@ -487,7 +507,6 @@ public class MessagePasser {
 			}
 		} else {
 			TimeStampedMessage tsm = new TimeStampedMessage(message.destination, message.kind, message.data, this.clockType);
-
 			tsm.set_source(message.source);
 			tsm.set_action(message.action);
 			tsm.duplicate = message.duplicate;
@@ -506,20 +525,20 @@ public class MessagePasser {
 		}
 
 		switch (message.action) {
-			case "drop":
-				// do nothing, just drop it
-				break;
-			case "duplicate":
-				sendMessage(message);
-				message.set_duplicate();
-				sendMessage(message);
-				break;
-			case "delay":
-				delaySendingQueue.offer(message);
-				break;
-			default:
-				sendMessage(message);
-				break;
+		case "drop":
+			// do nothing, just drop it
+			break;
+		case "duplicate":
+			sendMessage(message);
+			message.set_duplicate();
+			sendMessage(message);
+			break;
+		case "delay":
+			delaySendingQueue.offer(message);
+			break;
+		default:
+			sendMessage(message);
+			break;
 		}
 	}
 
@@ -550,7 +569,6 @@ public class MessagePasser {
 		} else {
 			System.out.println("INFO: " + "Time stamped message will be sent!");
 			TimeStampedMessage tsm = new TimeStampedMessage(message.destination, message.kind, message.data, this.clockType);
-
 			tsm.set_source(message.source);
 			tsm.set_action(message.action);
 			tsm.duplicate = message.duplicate;
@@ -562,6 +580,12 @@ public class MessagePasser {
 			if (this.clockType == ClockType.VECTOR) {
 				tsm.setVectorTimeStamps(((VectorClock) this.clockService).internalVectorClock);
 			}
+			
+			if(message.multicast){
+				tsm.setMulticast();
+				tsm.setMulticastVector(message.getMulticastVector());
+			}
+			
 			streamMap.get(message.destination).writeObject(tsm);
 			streamMap.get(message.destination).flush();
 			streamMap.get(message.destination).reset();
@@ -646,31 +670,31 @@ public class MessagePasser {
 			receivedMessage = messageQueue.poll();
 			String action = checkReceivingRules(receivedMessage);
 			switch (action) {
-				case "drop":
-					// System.out.println("INFO: " + "receive: drop");
-					// do nothing, just drop it
-					// System.out.println("INFO: " + "receive: drop");
-					break;
-				case "duplicate":
-					// System.out.println("INFO: " + "receive: duplicate");
-					popReceivingQueue.offer(receivedMessage);
-					popReceivingQueue.offer(receivedMessage);
-					while (!delayReceivingQueue.isEmpty()) {
-						popReceivingQueue.offer(delayReceivingQueue.poll());
-					}
-					break;
-				case "delay":
-					// System.out.println("INFO: " + "receive: delay");
-					delayReceivingQueue.offer(receivedMessage);
-					receiveMessage();
-					break;
-				default:
-					// default action
-					// System.out.println("INFO: " + "receive: default");
-					popReceivingQueue.offer(receivedMessage);
-					while (!delayReceivingQueue.isEmpty()) {
-						popReceivingQueue.offer(delayReceivingQueue.poll());
-					}
+			case "drop":
+				// System.out.println("INFO: " + "receive: drop");
+				// do nothing, just drop it
+				// System.out.println("INFO: " + "receive: drop");
+				break;
+			case "duplicate":
+				// System.out.println("INFO: " + "receive: duplicate");
+				popReceivingQueue.offer(receivedMessage);
+				popReceivingQueue.offer(receivedMessage);
+				while (!delayReceivingQueue.isEmpty()) {
+					popReceivingQueue.offer(delayReceivingQueue.poll());
+				}
+				break;
+			case "delay":
+				// System.out.println("INFO: " + "receive: delay");
+				delayReceivingQueue.offer(receivedMessage);
+				receiveMessage();
+				break;
+			default:
+				// default action
+				// System.out.println("INFO: " + "receive: default");
+				popReceivingQueue.offer(receivedMessage);
+				while (!delayReceivingQueue.isEmpty()) {
+					popReceivingQueue.offer(delayReceivingQueue.poll());
+				}
 			}
 		}
 		// System.out.println("INFO: " + "Receiving done..................");

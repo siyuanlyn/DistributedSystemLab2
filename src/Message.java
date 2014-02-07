@@ -1,5 +1,7 @@
 import java.io.Serializable;
 import java.util.Arrays;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class Message implements Serializable {
 
@@ -18,6 +20,34 @@ public class Message implements Serializable {
 	String action = "***";
 
 	boolean duplicate = false;
+
+	protected boolean multicast = false;
+
+	protected Integer[] multicastVector = {};
+
+	protected int groupNo = -1;
+	
+	public void setMulticastVector(Integer[] multicastVector){
+		this.multicastVector = multicastVector;
+	}
+	
+	public Integer[] getMulticastVector(){
+		return this.multicastVector;
+	}
+
+	public void setMulticast(){
+		this.multicast = true;
+	}
+
+	public int getGroupNo(){
+		return this.groupNo;
+	}
+	
+	public void setGroupNo(){
+		Pattern pattern = Pattern.compile("[^0-9]");
+		Matcher matcher = pattern.matcher(this.destination);
+		groupNo = Integer.parseInt(matcher.replaceAll("".trim()));
+	}
 
 	public Message(String dest, String kind, Object data) {
 		if (dest != null) {
@@ -66,6 +96,7 @@ class TimeStampedMessage extends Message {
 			ClockType clockType) {
 		super(dest, kind, data);
 		this.clockType = clockType;
+
 	}
 
 	public ClockType getClockType() {
@@ -90,13 +121,14 @@ class TimeStampedMessage extends Message {
 
 	public String toString() {
 		switch (this.clockType) {
-			case LOGICAL:
-				return "[source=" + source + "; destination=" + destination + "; kind=" + kind + "; data=" + (String) data + "; seqNum=" + sequenceNumber + "; action=" + action + "; duplicate=" + duplicate + "; processNo=" + logicalTimeStamps.processNo + "; logicalTimeStamp=" + logicalTimeStamps.timeStamp + "]";
-			case VECTOR:
-				return "[source=" + source + "; destination=" + destination + "; kind=" + kind + "; data=" + (String) data + "; seqNum=" + sequenceNumber + "; action=" + action + "; duplicate=" + duplicate + "; vectorTimeStamp=" + Arrays.toString(vectorTimeStamps.timeStampMatrix) + "]";
+		case LOGICAL:
+			return "[source=" + source + "; destination=" + destination + "; kind=" + kind + "; data=" + (String) data + "; seqNum=" + sequenceNumber + "; action=" + action + "; duplicate=" + duplicate + "; processNo=" + logicalTimeStamps.processNo + "; logicalTimeStamp=" + logicalTimeStamps.timeStamp + "; multicast=" + multicast + "; groupNo=" + groupNo + "; multicastVector=" + Arrays.toString(this.multicastVector) + "]";
+		case VECTOR:
+			return "[source=" + source + "; destination=" + destination + "; kind=" + kind + "; data=" + (String) data + "; seqNum=" + sequenceNumber + "; action=" + action + "; duplicate=" + duplicate + "; vectorTimeStamp=" + Arrays.toString(vectorTimeStamps.timeStampMatrix) + "; multicast=" + multicast + "; groupNo=" + groupNo + "; multicastVector=" + Arrays.toString(this.multicastVector) + "]";
 
-			default:
-				return "TIME STAMP MESSAGE ERROR";
+		default:
+			return "TIME STAMP MESSAGE ERROR";
 		}
 	}
 }
+

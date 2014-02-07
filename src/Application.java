@@ -92,6 +92,9 @@ public class Application {
 					}
 					messagePasser.printTimeStamp();
 					break;
+				case "multicast":
+					//construct the multicase message, set the group vector
+					break;
 				default:
 					System.err.println("Illegal input format! Please enter again!");
 			}
