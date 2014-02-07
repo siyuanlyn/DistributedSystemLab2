@@ -43,10 +43,8 @@ public class Message implements Serializable {
 		return this.groupNo;
 	}
 	
-	public void setGroupNo(){
-		Pattern pattern = Pattern.compile("[^0-9]");
-		Matcher matcher = pattern.matcher(this.destination);
-		groupNo = Integer.parseInt(matcher.replaceAll("".trim()));
+	public void setGroupNo(int groupNo){
+		this.groupNo = groupNo;
 	}
 
 	public Message(String dest, String kind, Object data) {
@@ -58,6 +56,11 @@ public class Message implements Serializable {
 		}
 		if (data != null) {
 			this.data = data;
+		}
+		Pattern pattern = Pattern.compile("[^0-9]");
+		Matcher matcher = pattern.matcher(this.destination);
+		if(matcher.replaceAll("".trim()) != null){
+			this.groupNo = Integer.parseInt(matcher.replaceAll("".trim()));
 		}
 	}
 

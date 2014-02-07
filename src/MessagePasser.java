@@ -14,6 +14,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
+import java.util.LinkedList;
 import java.util.Map;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.regex.Matcher;
@@ -273,7 +274,7 @@ public class MessagePasser {
 
 	ConcurrentLinkedQueue<TimeStampedMessage> logQueue = new ConcurrentLinkedQueue<TimeStampedMessage>();
 	
-	ConcurrentLinkedQueue<Message> holdBackQueue = new ConcurrentLinkedQueue<>(); 
+	LinkedList<Message> holdBackList = new LinkedList<>(); 
 
 	ArrayList<LinkedHashMap<String, String>> configList;
 
@@ -934,9 +935,26 @@ enum ProcessNo {
 			return DAPHNIE.value;
 		default:
 			return -1;
-			
 		}
 	}
+	
+	public static String getProcessName(int processNo){
+		switch(processNo){
+		case 0:
+			return "logger";
+		case 1:
+			return "alice";
+		case 2:
+			return "bob";
+		case 3:
+			return "charlie";
+		case 4:
+			return "daphnie";
+		default:
+			return null;
+		}
+	}
+	
 	private ProcessNo(int value) {
 		this.value = value;
 	}
