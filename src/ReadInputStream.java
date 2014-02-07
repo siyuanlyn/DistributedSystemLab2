@@ -45,6 +45,10 @@ public class ReadInputStream extends Thread {
 					ObjectOutputStream oos = new ObjectOutputStream(callBackSocket.getOutputStream());
 					messagePasser.streamMap.put(receivedMessage.source, oos);
 				}
+				if(receivedMessage.multicast){
+					messagePasser.multicast.deliver(receivedMessage);
+					continue;
+				}
 
 				this.messagePasser.messageQueue.offer(receivedMessage);
 			}

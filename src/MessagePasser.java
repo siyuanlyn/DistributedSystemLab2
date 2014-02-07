@@ -272,6 +272,8 @@ public class MessagePasser {
 	ConcurrentLinkedQueue<Message> delayReceivingQueue = new ConcurrentLinkedQueue<Message>();
 
 	ConcurrentLinkedQueue<TimeStampedMessage> logQueue = new ConcurrentLinkedQueue<TimeStampedMessage>();
+	
+	ConcurrentLinkedQueue<Message> holdBackQueue = new ConcurrentLinkedQueue<>(); 
 
 	ArrayList<LinkedHashMap<String, String>> configList;
 
@@ -918,7 +920,23 @@ enum ProcessNo {
 	LOGGER(0), ALICE(1), BOB(2), CHARLIE(3), DAPHNIE(4);
 
 	public int value;
-
+	public static int getProcessNo(String processName) {
+		switch(processName.toLowerCase()){
+		case "logger":
+			return LOGGER.value;
+		case "alice":
+			return ALICE.value;
+		case "bob":
+			return BOB.value;
+		case "charlie":
+			return CHARLIE.value;
+		case "daphnie":
+			return DAPHNIE.value;
+		default:
+			return -1;
+			
+		}
+	}
 	private ProcessNo(int value) {
 		this.value = value;
 	}
