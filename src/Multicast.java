@@ -12,7 +12,8 @@ public class Multicast {
 	HashMap<Integer, ArrayList<String>> groupMap = new HashMap<>();
 	HashMap<Integer, Integer[]> vectorMap = new HashMap<>();
 	MessagePasser messagePasser;
-	ArrayList<Message> multicastSendingBuffer = new ArrayList<>();
+//	ArrayList<Message> multicastSendingBuffer = new ArrayList<>();
+	ArrayList<ArrayList<Message>> sendingBufferList = new ArrayList<>();
 
 	public Multicast(MessagePasser messagePasser){
 		this.messagePasser = messagePasser;
@@ -20,6 +21,13 @@ public class Multicast {
 
 	}
 
+	public void initSendingBufferList(){
+		System.out.println("INFO: GROUP MAP SIZE: " + groupMap.size());
+		for(int i=0; i<groupMap.size(); i++){
+			sendingBufferList.add(new ArrayList<Message>());
+		}
+	}
+	
 	public void initVectorMap(){
 		int vectorLength = messagePasser.nodeMap.size();
 		for(Integer i : groupMap.keySet()){
@@ -33,6 +41,7 @@ public class Multicast {
 	}
 
 	public void send(Message message) throws IOException, InterruptedException{
+		int groupNo = message.getGroupNo();
 		//b-multicast:
 		System.out.println("INFO: vector map: " + vectorMap.toString());
 		System.out.println("INFO: group number: " + message.getGroupNo());
@@ -62,12 +71,15 @@ public class Multicast {
 			}
 		}
 		System.out.println("BEFORE SENDING BUFFER ENQUEUE: " + Arrays.toString(message.multicastVector));
-		for(Message m : multicastSendingBuffer){
+//		for(Message m : multicastSendingBuffer){
+		for(Message m : sendingBufferList.get(groupNo-1)){
 			System.out.println("BUFFFFFFFFFFFFFFER before add: " + Arrays.toString(m.multicastVector));
 		}
 //		Message n = message;
-		multicastSendingBuffer.add(message);
-		for(Message m : multicastSendingBuffer){
+//		multicastSendingBuffer.add(message);
+		sendingBufferList.get(groupNo-1).add(message);
+//		for(Message m : multicastSendingBuffer){
+		for(Message m : sendingBufferList.get(groupNo-1)){
 			System.out.println("BUFFFFFFFFFFFFFFER after add: " + Arrays.toString(m.multicastVector));
 		}
 		if(messagePasser.clockType == ClockType.VECTOR){
@@ -181,9 +193,11 @@ public class Multicast {
 
 	public void retransmit(Message message){
 		//get the index in the sending buffer
+		int groupNo = message.getGroupNo();
 		int retransmitIndex = message.multicastVector[messagePasser.processNo.value]+1;
 		System.out.println("RETRANSMIT INDEX!: " + retransmitIndex);
-		for(Message m : this.multicastSendingBuffer){
+//		for(Message m : this.multicastSendingBuffer){
+		for(Message m : sendingBufferList.get(groupNo-1)){
 			System.out.println("IN THE SENDING BUFFER: " + Arrays.toString(m.multicastVector));
 			if(m.multicastVector[messagePasser.processNo.value] == retransmitIndex){
 				Message retransmitMsgMessage = m;

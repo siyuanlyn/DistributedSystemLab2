@@ -360,6 +360,7 @@ public class MessagePasser {
 			nodeMap.put(name, new Node(ip, port));
 		}
 		multicast.initVectorMap();
+		multicast.initSendingBufferList();
 		int portNumber = nodeMap.get(local_name).port;
 		serverSocket = new ServerSocket(portNumber);
 		startListenerThread();
