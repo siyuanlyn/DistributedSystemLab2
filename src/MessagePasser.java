@@ -274,7 +274,7 @@ public class MessagePasser {
 
 	ConcurrentLinkedQueue<TimeStampedMessage> logQueue = new ConcurrentLinkedQueue<TimeStampedMessage>();
 	
-	LinkedList<Message> holdBackList = new LinkedList<>(); 
+//	LinkedList<Message> holdBackList = new LinkedList<>(); 
 
 	ArrayList<LinkedHashMap<String, String>> configList;
 
@@ -361,6 +361,7 @@ public class MessagePasser {
 		}
 		multicast.initVectorMap();
 		multicast.initSendingBufferList();
+		multicast.initHoldBackQueueList();
 		int portNumber = nodeMap.get(local_name).port;
 		serverSocket = new ServerSocket(portNumber);
 		startListenerThread();
