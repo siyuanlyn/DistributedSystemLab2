@@ -111,8 +111,6 @@ public class Application {
 					Matcher matcher = pattern.matcher(mInput[0]);
 					while (mInput.length != 3 || matcher.replaceAll("".trim()).equals("")) {
 						System.err.println("Illegal input format! Please enter again!\n" + usage);
-//						Thread.sleep(1);
-//						System.out.println(usage);
 						mInput = in.readLine().split("/");
 						matcher = pattern.matcher(mInput[0]);
 					}				
