@@ -1,0 +1,253 @@
+
+import java.io.IOException;
+import java.net.UnknownHostException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.LinkedList;
+
+public class Multicast {
+	HashMap<Integer, ArrayList<String>> groupMap = new HashMap<>();
+	HashMap<Integer, Integer[]> vectorMap = new HashMap<>();
+	MessagePasser messagePasser;
+	ArrayList<Message> multicastSendingBuffer = new ArrayList<>();
+
+	public Multicast(MessagePasser messagePasser){
+		this.messagePasser = messagePasser;
+		System.out.println("INFO: initialize the multicast!");
+
+	}
+
+	public void initVectorMap(){
+		int vectorLength = messagePasser.nodeMap.size();
+		for(Integer i : groupMap.keySet()){
+			Integer[] groupVector = new Integer[vectorLength];
+			for(int j=0; j<vectorLength; j++){
+				groupVector[j] = 0;
+			}
+			vectorMap.put(i, groupVector);
+			System.out.println("INFO: initialize vector map: " + Arrays.toString(vectorMap.get(i)));
+		}
+	}
+
+	public void send(Message message) throws IOException, InterruptedException{
+		//b-multicast:
+		System.out.println("INFO: vector map: " + vectorMap.toString());
+		System.out.println("INFO: group number: " + message.getGroupNo());
+		vectorMap.get(message.getGroupNo())[messagePasser.processNo.value]++;
+		message.setMulticast();
+		
+		int length = (vectorMap.get(message.getGroupNo())).length;
+		int[] a = new int[length];
+		for(int i=0; i<length; i++){
+			a[i] =  (vectorMap.get(message.getGroupNo()))[i];
+		}
+		
+//		message.setMulticastVector(vectorMap.get(message.getGroupNo()));
+		message.setMulticastVector(a);
+		//save every multicasting message in the buffer for retransmission
+		
+		for(String dest : groupMap.get(message.getGroupNo())){
+			if(!dest.equalsIgnoreCase(messagePasser.local_name)){
+				message.destination = dest;
+				System.out.println("INFO: MULTISEND MULTICAST VECTOR: " + Arrays.toString(message.multicastVector));
+				
+				
+				messagePasser.send(message);
+				if(messagePasser.clockType == ClockType.VECTOR){
+					((VectorClock)messagePasser.clockService).internalVectorClock.timeStampMatrix[messagePasser.processNo.value]--;
+				}	
+			}
+		}
+		System.out.println("BEFORE SENDING BUFFER ENQUEUE: " + Arrays.toString(message.multicastVector));
+		for(Message m : multicastSendingBuffer){
+			System.out.println("BUFFFFFFFFFFFFFFER before add: " + Arrays.toString(m.multicastVector));
+		}
+		Message n = message;
+		multicastSendingBuffer.add(n);
+		for(Message m : multicastSendingBuffer){
+			System.out.println("BUFFFFFFFFFFFFFFER after add: " + Arrays.toString(m.multicastVector));
+		}
+		if(messagePasser.clockType == ClockType.VECTOR){
+			((VectorClock)messagePasser.clockService).ticks();
+		}
+	}
+
+	//r-deliver
+	public void deliver(Message message) {
+		//check time stamp;
+		int[] messageTimeStamp = message.multicastVector;
+//		Integer[] internalMulticastTimeStamp = vectorMap.get(message.getGroupNo());
+		
+		
+		
+		
+		int length = (vectorMap.get(message.getGroupNo())).length;
+		int[] internalMulticastTimeStamp = new int[length];
+		for(int i=0; i<length; i++){
+			internalMulticastTimeStamp[i] =  (vectorMap.get(message.getGroupNo()))[i];
+		}
+		
+		
+		
+		
+		System.out.println("INFO: Deliver, disposal: " + message.getGroupNo() + " " + ProcessNo.getProcessNo(message.source) + " " + Arrays.toString(messageTimeStamp) + " " + Arrays.toString(internalMulticastTimeStamp));
+		Disposal disposal = compareMulticastTimeStamp(message.getGroupNo(), ProcessNo.getProcessNo(message.source), messageTimeStamp, internalMulticastTimeStamp);
+		if(disposal.discard){
+			//do nothing;
+			System.out.println("DISCARD");
+		}
+		else if(disposal.holdBack){
+			System.out.println("HOLDBACK");
+			messagePasser.holdBackList.offer(message);
+			//sort the hold back queue;
+			Collections.sort(messagePasser.holdBackList, new holdBackComparator());
+		}
+		else{
+			//deliver:
+			System.out.println("DELIVER!");
+			++vectorMap.get(message.getGroupNo())[ProcessNo.getProcessNo(message.source)];
+			messagePasser.messageQueue.offer(message);
+			internalMulticastTimeStamp = new int[length];
+			for(int i=0; i<length; i++){
+				internalMulticastTimeStamp[i] =  (vectorMap.get(message.getGroupNo()))[i];
+			}
+			while(messagePasser.holdBackList.size() != 0){
+				System.out.println("HOLDBACK DEQUEUE!");
+				System.out.println("INFO: Deliver, disposal 2: " + message.getGroupNo() + " " + ProcessNo.getProcessNo(messagePasser.holdBackList.peek().source) + " " + Arrays.toString(messagePasser.holdBackList.peek().multicastVector) + " " + Arrays.toString(internalMulticastTimeStamp));
+				Disposal redisposal = compareMulticastTimeStamp(message.getGroupNo(), ProcessNo.getProcessNo(messagePasser.holdBackList.peek().source), messagePasser.holdBackList.peek().multicastVector, internalMulticastTimeStamp);
+				if(!redisposal.holdBack){
+					messagePasser.messageQueue.offer(messagePasser.holdBackList.poll());
+					vectorMap.get(message.getGroupNo())[ProcessNo.getProcessNo(message.source)]++;
+				}
+				else{
+					break;
+				}
+			}
+		}
+
+	}
+
+	private Disposal compareMulticastTimeStamp(Integer groupNo, Integer srcNo, int[] external, int[] internal) {
+		int sourceNo = srcNo;
+		Disposal disposal = new Disposal();
+		if(external[sourceNo] <= internal[sourceNo]){
+			//drop duplicate retransmision;
+			System.out.println("discard disposal");
+			disposal.discard = true;
+		}
+		else if(external[sourceNo] - internal[sourceNo] > 1){
+			//send NACK(source, timestamp);
+			System.out.println("nack(1)");
+			sendNACK(groupNo, sourceNo, internal);
+			disposal.holdBack = true;	//hold back
+		}
+		else {
+			for(int i=0; i<internal.length; i++){
+				if(i != sourceNo && external[i]>internal[i]){
+					//send NACK(source, timestamp)
+					System.out.println("nack(2)");
+					sendNACK(groupNo, i, internal);
+					disposal.holdBack = true;
+				}
+			}
+		}
+		return disposal;
+	}
+
+	private void sendNACK(Integer groupNo, int srcNo, int[] timeStamp){
+		//translate srcNo to process name
+		System.out.println("N A C K !");
+		String processNameString = ProcessNo.getProcessName(srcNo);
+		Message message = new Message(processNameString, "NACK", null);
+		message.set_source(messagePasser.local_name);
+		message.setMulticast();
+		message.setGroupNo(groupNo);
+		message.setMulticastVector(timeStamp);
+		try {
+			messagePasser.send(message);
+		} catch (UnknownHostException e) {
+			e.printStackTrace();
+		} catch (IOException e) {
+			e.printStackTrace();
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
+		//send
+		//self event clock --;
+		if(messagePasser.clockType == ClockType.VECTOR){
+			((VectorClock)messagePasser.clockService).internalVectorClock.timeStampMatrix[messagePasser.processNo.value]--;
+		}
+	}
+
+	public void retransmit(Message message){
+		//get the index in the sending buffer
+		int retransmitIndex = message.multicastVector[messagePasser.processNo.value]+1;
+		System.out.println("RETRANSMIT INDEX!: " + retransmitIndex);
+		for(Message m : this.multicastSendingBuffer){
+			System.out.println("IN THE SENDING BUFFER: " + Arrays.toString(m.multicastVector));
+			if(m.multicastVector[messagePasser.processNo.value] == retransmitIndex){
+				Message retransmitMsgMessage = m;
+				retransmitMsgMessage.destination = message.source;
+				try {
+					System.out.println("RETRANSMIT: " + Arrays.toString(retransmitMsgMessage.multicastVector));
+					messagePasser.send(retransmitMsgMessage);
+					((VectorClock)messagePasser.clockService).internalVectorClock.timeStampMatrix[messagePasser.processNo.value]--;
+				} catch (UnknownHostException e) {
+					e.printStackTrace();
+				} catch (IOException e) {
+					e.printStackTrace();
+				} catch (InterruptedException e) {
+					e.printStackTrace();
+				}
+				break;
+			}
+			
+		}
+	}
+}
+
+class Disposal {
+	boolean holdBack = false;
+	boolean discard = false;
+}
+
+class holdBackComparator implements Comparator<Message> {
+
+	public int compare(Message msg1, Message msg2) {
+		int i;
+		for (i = 0; i < msg1.multicastVector.length; i++) {
+			if (msg1.multicastVector[i] != msg2.multicastVector[i]) {
+				break;
+			}
+		}
+		if (i == msg1.multicastVector.length) {
+			return 0; // completely equal!
+		} else {
+			for (i = 0; i < msg1.multicastVector.length; i++) {
+				if (msg1.multicastVector[i] <= msg2.multicastVector[i]) {
+					continue;
+				}
+				break;
+			}
+			if (i == msg1.multicastVector.length) {
+				return -1; // not equal, happen before
+			} else {
+				for (i = 0; i < msg1.multicastVector.length; i++) {
+					if (msg1.multicastVector[i] >= msg2.multicastVector[i]) {
+						continue;
+					}
+					break;
+				}
+				if (i == msg1.multicastVector.length) {
+					return 1; // happen after
+				} else {
+					return 0; // concurrent
+				}
+			}
+		}
+
+	}
+}
