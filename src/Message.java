@@ -27,8 +27,14 @@ public class Message implements Serializable {
 
 	protected int groupNo = -1;
 	
-	public void setMulticastVector(int[] multicastVector){
-		this.multicastVector = multicastVector;
+	public void setMulticastVector(int[] newMulticastVector){
+		
+//		this.multicastVector = new int[newMulticastVector.length];
+//		for(int i=0; i<newMulticastVector.length; i++ ){
+//			this.multicastVector[i] = newMulticastVector[i];
+//		}
+		
+		this.multicastVector = newMulticastVector;
 	}
 	
 	public int[] getMulticastVector(){
