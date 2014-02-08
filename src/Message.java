@@ -59,7 +59,7 @@ public class Message implements Serializable {
 		}
 		Pattern pattern = Pattern.compile("[^0-9]");
 		Matcher matcher = pattern.matcher(this.destination);
-		if(matcher.replaceAll("".trim()) != null){
+		if(!matcher.replaceAll("".trim()).equals("")){
 			this.groupNo = Integer.parseInt(matcher.replaceAll("".trim()));
 		}
 	}

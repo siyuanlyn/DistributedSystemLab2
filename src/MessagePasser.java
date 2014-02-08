@@ -304,7 +304,7 @@ public class MessagePasser {
 
 	boolean log = false;
 
-	Multicast multicast = new Multicast(this);
+	Multicast multicast = new Multicast(this); 
 
 	public void setClockService(ClockType clockType) {
 		switch (clockType) {
@@ -344,12 +344,13 @@ public class MessagePasser {
 			ArrayList<String> memberList = (ArrayList<String>)m.get("members");
 			multicast.groupMap.put(groupNo, memberList);
 		}
+//		System.out.println("INFO: group map:" + multicast.groupMap.toString());
 		for(int x : multicast.groupMap.keySet()){
 			System.out.println(x + " " + multicast.groupMap.get(x).toString());
 		}
 		// System.out.println("INFO: " + sendRuleList.toString());
 		// System.out.println("INFO: " + receiveRuleList.toString());
-		System.out.println("INFO: " + multicastGroupList.toString());
+//		System.out.println("INFO: " + multicastGroupList.toString());
 		this.processCount = configList.size();
 		System.out.println("INFO: The number of processes in configuration file: " + this.processCount);
 		for (Map m : configList) {
@@ -358,6 +359,7 @@ public class MessagePasser {
 			int port = (int) m.get("port");
 			nodeMap.put(name, new Node(ip, port));
 		}
+		multicast.initVectorMap();
 		int portNumber = nodeMap.get(local_name).port;
 		serverSocket = new ServerSocket(portNumber);
 		startListenerThread();
@@ -572,11 +574,13 @@ public class MessagePasser {
 		} else {
 			System.out.println("INFO: " + "Time stamped message will be sent!");
 			TimeStampedMessage tsm = new TimeStampedMessage(message.destination, message.kind, message.data, this.clockType);
+			System.out.println("TSM: " + tsm.destination);
 			tsm.set_source(message.source);
 			tsm.set_action(message.action);
 			tsm.duplicate = message.duplicate;
 			tsm.sequenceNumber = message.sequenceNumber;
-
+			tsm.setGroupNo(message.getGroupNo());
+			tsm.setMulticastVector(message.getMulticastVector());
 			if (this.clockType == ClockType.LOGICAL) {
 				tsm.setLogicalTimeStamps(((LogicalClock) this.clockService).internalLogicalClock);
 			}

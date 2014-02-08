@@ -49,6 +49,7 @@ public class ReadInputStream extends Thread {
 					messagePasser.multicast.retransmit(receivedMessage);
 				}
 				if(receivedMessage.multicast){
+					System.out.println("INFO: before deliver: " + receivedMessage.getGroupNo());
 					messagePasser.multicast.deliver(receivedMessage);
 					continue;
 				}

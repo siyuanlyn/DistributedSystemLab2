@@ -1,6 +1,8 @@
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class Application {
 
@@ -17,7 +19,7 @@ public class Application {
 		MessagePasser messagePasser = new MessagePasser(args[0], args[1]);
 		BufferedReader in = new BufferedReader(new InputStreamReader(System.in));
 		while (true) {
-			System.out.println("Enter the command you want to execute: send, receive, retrieve (log from logger) or print (time stamp)");
+			System.out.println("Enter the command you want to execute: send, receive, retrieve (log from logger), print (time stamp) or multicast");
 			String command = in.readLine();
 			String dest, kind, sendingMessage;
 			String logIt = null;
@@ -93,7 +95,34 @@ public class Application {
 					messagePasser.printTimeStamp();
 					break;
 				case "multicast":
-					//construct the multicase message, set the group vector
+					//construct the multicast message, set the group vector
+					System.out.println("Do you want to log this event? Enter yes or no");
+					logIt = in.readLine();
+					while (!(logIt.equalsIgnoreCase("yes") || logIt.equalsIgnoreCase("no"))) {
+						System.out.println("please enter \"yes\" or \"no\"\n" + "Do you want to log this event?");
+						logIt = in.readLine();
+					}
+					if (logIt.equalsIgnoreCase("yes")) {
+						messagePasser.log = true;
+					}
+					System.out.println(usage);
+					String[] mInput = in.readLine().split("/");
+					Pattern pattern = Pattern.compile("[^0-9]");
+					Matcher matcher = pattern.matcher(mInput[0]);
+					while (mInput.length != 3 || matcher.replaceAll("".trim()).equals("")) {
+						System.err.println("Illegal input format! Please enter again!\n" + usage);
+//						Thread.sleep(1);
+//						System.out.println(usage);
+						mInput = in.readLine().split("/");
+						matcher = pattern.matcher(mInput[0]);
+					}				
+					dest = mInput[0];
+					kind = mInput[1];
+					sendingMessage = mInput[2];			
+					Message multicastMessage = new Message(dest, kind, sendingMessage);
+					multicastMessage.set_source(args[1]);
+					multicastMessage.set_seqNum(generateSeqNum());
+					messagePasser.multicast.send(multicastMessage);
 					break;
 				default:
 					System.err.println("Illegal input format! Please enter again!");
