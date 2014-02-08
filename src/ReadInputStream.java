@@ -46,7 +46,9 @@ public class ReadInputStream extends Thread {
 					messagePasser.streamMap.put(receivedMessage.source, oos);
 				}
 				if(receivedMessage.kind.equalsIgnoreCase("NACK")){
+					System.out.println("RETRANSMIT!");
 					messagePasser.multicast.retransmit(receivedMessage);
+					continue;
 				}
 				if(receivedMessage.multicast){
 					System.out.println("INFO: before deliver: " + receivedMessage.getGroupNo());

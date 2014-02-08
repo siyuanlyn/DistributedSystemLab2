@@ -23,15 +23,15 @@ public class Message implements Serializable {
 
 	protected boolean multicast = false;
 
-	protected Integer[] multicastVector = {};
+	protected int[] multicastVector = {};
 
 	protected int groupNo = -1;
 	
-	public void setMulticastVector(Integer[] multicastVector){
+	public void setMulticastVector(int[] multicastVector){
 		this.multicastVector = multicastVector;
 	}
 	
-	public Integer[] getMulticastVector(){
+	public int[] getMulticastVector(){
 		return this.multicastVector;
 	}
 
