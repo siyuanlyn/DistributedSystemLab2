@@ -537,6 +537,7 @@ public class MessagePasser {
 			sendMessage(message);
 			message.set_duplicate();
 			sendMessage(message);
+			message.duplicate = false;
 			break;
 		case "delay":
 			delaySendingQueue.offer(message);

@@ -40,13 +40,13 @@ public class Multicast {
 		message.setMulticast();
 		
 		int length = (vectorMap.get(message.getGroupNo())).length;
-		int[] a = new int[length];
+		int[] tmp = new int[length];
 		for(int i=0; i<length; i++){
-			a[i] =  (vectorMap.get(message.getGroupNo()))[i];
+			tmp[i] =  (vectorMap.get(message.getGroupNo()))[i];
 		}
 		
 //		message.setMulticastVector(vectorMap.get(message.getGroupNo()));
-		message.setMulticastVector(a);
+		message.setMulticastVector(tmp);
 		//save every multicasting message in the buffer for retransmission
 		
 		for(String dest : groupMap.get(message.getGroupNo())){
@@ -65,8 +65,8 @@ public class Multicast {
 		for(Message m : multicastSendingBuffer){
 			System.out.println("BUFFFFFFFFFFFFFFER before add: " + Arrays.toString(m.multicastVector));
 		}
-		Message n = message;
-		multicastSendingBuffer.add(n);
+//		Message n = message;
+		multicastSendingBuffer.add(message);
 		for(Message m : multicastSendingBuffer){
 			System.out.println("BUFFFFFFFFFFFFFFER after add: " + Arrays.toString(m.multicastVector));
 		}
@@ -90,11 +90,8 @@ public class Multicast {
 			internalMulticastTimeStamp[i] =  (vectorMap.get(message.getGroupNo()))[i];
 		}
 		
-		
-		
-		
 		System.out.println("INFO: Deliver, disposal: " + message.getGroupNo() + " " + ProcessNo.getProcessNo(message.source) + " " + Arrays.toString(messageTimeStamp) + " " + Arrays.toString(internalMulticastTimeStamp));
-		Disposal disposal = compareMulticastTimeStamp(message.getGroupNo(), ProcessNo.getProcessNo(message.source), messageTimeStamp, internalMulticastTimeStamp);
+		Disposal disposal = compareMulticastTimeStamp(message.getGroupNo(), ProcessNo.getProcessNo(message.source), messageTimeStamp, internalMulticastTimeStamp, message.duplicate);
 		if(disposal.discard){
 			//do nothing;
 			System.out.println("DISCARD");
@@ -117,7 +114,7 @@ public class Multicast {
 			while(messagePasser.holdBackList.size() != 0){
 				System.out.println("HOLDBACK DEQUEUE!");
 				System.out.println("INFO: Deliver, disposal 2: " + message.getGroupNo() + " " + ProcessNo.getProcessNo(messagePasser.holdBackList.peek().source) + " " + Arrays.toString(messagePasser.holdBackList.peek().multicastVector) + " " + Arrays.toString(internalMulticastTimeStamp));
-				Disposal redisposal = compareMulticastTimeStamp(message.getGroupNo(), ProcessNo.getProcessNo(messagePasser.holdBackList.peek().source), messagePasser.holdBackList.peek().multicastVector, internalMulticastTimeStamp);
+				Disposal redisposal = compareMulticastTimeStamp(message.getGroupNo(), ProcessNo.getProcessNo(messagePasser.holdBackList.peek().source), messagePasser.holdBackList.peek().multicastVector, internalMulticastTimeStamp, message.duplicate);
 				if(!redisposal.holdBack){
 					messagePasser.messageQueue.offer(messagePasser.holdBackList.poll());
 					vectorMap.get(message.getGroupNo())[ProcessNo.getProcessNo(message.source)]++;
@@ -130,10 +127,10 @@ public class Multicast {
 
 	}
 
-	private Disposal compareMulticastTimeStamp(Integer groupNo, Integer srcNo, int[] external, int[] internal) {
+	private Disposal compareMulticastTimeStamp(Integer groupNo, Integer srcNo, int[] external, int[] internal, boolean dup) {
 		int sourceNo = srcNo;
 		Disposal disposal = new Disposal();
-		if(external[sourceNo] <= internal[sourceNo]){
+		if(external[sourceNo] <= internal[sourceNo] && dup == false){
 			//drop duplicate retransmision;
 			System.out.println("discard disposal");
 			disposal.discard = true;
