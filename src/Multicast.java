@@ -65,14 +65,13 @@ public class Multicast {
 //		message.setMulticastVector(vectorMap.get(message.getGroupNo()));
 		message.setMulticastVector(tmp);
 		//save every multicasting message in the buffer for retransmission
-		
 		for(String dest : groupMap.get(message.getGroupNo())){
 			if(!dest.equalsIgnoreCase(messagePasser.local_name)){
 				message.destination = dest;
 				System.out.println("INFO: MULTISEND MULTICAST VECTOR: " + Arrays.toString(message.multicastVector));
+				Message sendingMsg = message.clone(message);
 				
-				
-				messagePasser.send(message);
+				messagePasser.send(sendingMsg);
 				if(messagePasser.clockType == ClockType.VECTOR){
 					((VectorClock)messagePasser.clockService).internalVectorClock.timeStampMatrix[messagePasser.processNo.value]--;
 				}	
@@ -211,11 +210,12 @@ public class Multicast {
 		for(Message m : sendingBufferList.get(groupNo-1)){
 			System.out.println("IN THE SENDING BUFFER: " + Arrays.toString(m.multicastVector));
 			if(m.multicastVector[messagePasser.processNo.value] == retransmitIndex){
-				Message retransmitMsgMessage = m;
-				retransmitMsgMessage.destination = message.source;
+				Message retransmitMsg = m;
+				retransmitMsg.destination = message.source;
 				try {
-					System.out.println("RETRANSMIT: " + Arrays.toString(retransmitMsgMessage.multicastVector));
-					messagePasser.send(retransmitMsgMessage);
+					System.out.println("RETRANSMIT: " + Arrays.toString(retransmitMsg.multicastVector));
+					System.out.println("RETRANSMIT: " + retransmitMsg.destination);
+					messagePasser.send(retransmitMsg);
 					if(messagePasser.clockType == ClockType.VECTOR){
 						((VectorClock)messagePasser.clockService).internalVectorClock.timeStampMatrix[messagePasser.processNo.value]--;
 					}

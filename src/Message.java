@@ -27,6 +27,18 @@ public class Message implements Serializable {
 
 	protected int groupNo = -1;
 	
+	public Message clone(Message oldMsg){
+		Message retmsg = new Message(oldMsg.destination, oldMsg.kind, oldMsg.data);
+		retmsg.source = oldMsg.source;
+		retmsg.action = oldMsg.action;
+		retmsg.duplicate = oldMsg.duplicate;
+		retmsg.groupNo = oldMsg.groupNo;
+		retmsg.multicast = oldMsg.multicast;
+		retmsg.multicastVector = oldMsg.multicastVector;
+		retmsg.sequenceNumber = oldMsg.sequenceNumber;
+		return retmsg;
+	}
+	
 	public void setMulticastVector(int[] newMulticastVector){
 		
 //		this.multicastVector = new int[newMulticastVector.length];

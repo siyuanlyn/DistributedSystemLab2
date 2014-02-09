@@ -486,6 +486,7 @@ public class MessagePasser {
 
 	void send(Message message) throws UnknownHostException, IOException,
 	InterruptedException {
+		System.out.println("SEND MESSAGE(BEFORE RULES) TO: " + message.destination);
 		reconfiguration();
 		this.function = Function.SEND;
 		if (this.clockType == ClockType.LOGICAL) {
@@ -542,6 +543,7 @@ public class MessagePasser {
 			message.duplicate = false;
 			break;
 		case "delay":
+			System.out.println("DELAY!: " + message.destination);
 			delaySendingQueue.offer(message);
 			break;
 		default:
@@ -552,7 +554,7 @@ public class MessagePasser {
 
 	@SuppressWarnings("resource")
 	void sendMessage(Message message) throws IOException {
-
+		int seqNo = message.sequenceNumber;
 		if (!streamMap.containsKey(message.destination)) {
 			System.out.println("INFO: " + "new socket: " + nodeMap.get(message.destination).ip + " " + nodeMap.get(message.destination).port);
 			if (!nodeMap.containsKey(message.destination)) {
@@ -595,12 +597,13 @@ public class MessagePasser {
 				tsm.setMulticast();
 				tsm.setMulticastVector(message.getMulticastVector());
 			}
-			
+			System.out.println("SEND MESSAGE TO: " + tsm.destination);
 			streamMap.get(message.destination).writeObject(tsm);
 			streamMap.get(message.destination).flush();
 			streamMap.get(message.destination).reset();
 		}
-		while (!delaySendingQueue.isEmpty()) {
+		while (!delaySendingQueue.isEmpty() && seqNo != delaySendingQueue.peek().sequenceNumber) {
+			System.out.println("PEEK: " + delaySendingQueue.peek().destination);
 			sendMessage(delaySendingQueue.poll());
 		}
 	}
