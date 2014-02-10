@@ -61,7 +61,6 @@ public class Multicast {
 			tmp[i] =  (vectorMap.get(message.getGroupNo()))[i];
 		}
 		
-//		message.setMulticastVector(vectorMap.get(message.getGroupNo()));
 		message.setMulticastVector(tmp);
 		//save every multicasting message in the buffer for retransmission
 		for(String dest : groupMap.get(message.getGroupNo())){
@@ -77,14 +76,10 @@ public class Multicast {
 			}
 		}
 		System.out.println("BEFORE SENDING BUFFER ENQUEUE: " + Arrays.toString(message.multicastVector));
-//		for(Message m : multicastSendingBuffer){
 		for(Message m : sendingBufferList.get(groupNo-1)){
 			System.out.println("BUFFFFFFFFFFFFFFER before add: " + Arrays.toString(m.multicastVector));
 		}
-//		Message n = message;
-//		multicastSendingBuffer.add(message);
 		sendingBufferList.get(groupNo-1).add(message);
-//		for(Message m : multicastSendingBuffer){
 		for(Message m : sendingBufferList.get(groupNo-1)){
 			System.out.println("BUFFFFFFFFFFFFFFER after add: " + Arrays.toString(m.multicastVector));
 		}
@@ -97,11 +92,7 @@ public class Multicast {
 	public void deliver(Message message) {
 		//check time stamp;
 		int[] messageTimeStamp = message.multicastVector;
-//		Integer[] internalMulticastTimeStamp = vectorMap.get(message.getGroupNo());
 		int groupNo = message.getGroupNo();
-		
-		
-		
 		int length = (vectorMap.get(message.getGroupNo())).length;
 		int[] internalMulticastTimeStamp = new int[length];
 		for(int i=0; i<length; i++){
@@ -116,22 +107,21 @@ public class Multicast {
 		}
 		else if(disposal.holdBack){
 			System.out.println("HOLDBACK");
-//			messagePasser.holdBackList.offer(message);
 			this.holdBackQueueList.get(groupNo-1).offer(message);
 			//sort the hold back queue;
-//			Collections.sort(messagePasser.holdBackList, new holdBackComparator());
 			Collections.sort(this.holdBackQueueList.get(groupNo-1), new holdBackComparator());
 		}
 		else{
 			//deliver:
 			System.out.println("DELIVER!");
-			++vectorMap.get(message.getGroupNo())[ProcessNo.getProcessNo(message.source)];
+			if(!message.duplicate){
+				++vectorMap.get(message.getGroupNo())[ProcessNo.getProcessNo(message.source)];
+			}
 			messagePasser.messageQueue.offer(message);
 			internalMulticastTimeStamp = new int[length];
 			for(int i=0; i<length; i++){
 				internalMulticastTimeStamp[i] =  (vectorMap.get(message.getGroupNo()))[i];
 			}
-//			while(messagePasser.holdBackList.size() != 0){
 			while(this.holdBackQueueList.get(groupNo-1).size() !=0){
 				System.out.println("HOLDBACK DEQUEUE!");
 				System.out.println("INFO: Deliver, disposal 2: " + message.getGroupNo() + " " + ProcessNo.getProcessNo(this.holdBackQueueList.get(groupNo-1).peek().source) + " " + Arrays.toString(this.holdBackQueueList.get(groupNo-1).peek().multicastVector) + " " + Arrays.toString(internalMulticastTimeStamp));
@@ -205,7 +195,6 @@ public class Multicast {
 		int groupNo = message.getGroupNo();
 		int retransmitIndex = message.multicastVector[messagePasser.processNo.value]+1;
 		System.out.println("RETRANSMIT INDEX!: " + retransmitIndex);
-//		for(Message m : this.multicastSendingBuffer){
 		for(Message m : sendingBufferList.get(groupNo-1)){
 			System.out.println("IN THE SENDING BUFFER: " + Arrays.toString(m.multicastVector));
 			if(m.multicastVector[messagePasser.processNo.value] == retransmitIndex){
