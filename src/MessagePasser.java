@@ -488,7 +488,9 @@ public class MessagePasser {
 	InterruptedException {
 		System.out.println("SEND MESSAGE(BEFORE RULES) TO: " + message.destination);
 		reconfiguration();
-		this.function = Function.SEND;
+		if(this.function != Function.MULTICAST){
+			this.function = Function.SEND;
+		}
 		if (this.clockType == ClockType.LOGICAL) {
 			((LogicalClock) this.clockService).ticks();
 			System.out.println("INFO: " + "logical time stamp now: " + ((LogicalClock) this.clockService).internalLogicalClock.timeStamp);
@@ -519,6 +521,9 @@ public class MessagePasser {
 			tsm.set_action(message.action);
 			tsm.duplicate = message.duplicate;
 			tsm.sequenceNumber = message.sequenceNumber;
+			tsm.groupNo = message.groupNo;
+			tsm.multicast = message.multicast;
+			tsm.multicastVector = message.multicastVector;
 
 			if (this.clockType == ClockType.LOGICAL) {
 				tsm.setLogicalTimeStamps(((LogicalClock) this.clockService).internalLogicalClock);
@@ -816,6 +821,10 @@ public class MessagePasser {
 		TimeStampedMessage sendingLog = null;
 		if (logMessage.getClass().equals(TimeStampedMessage.class)) {
 			timeStampedLog = (TimeStampedMessage) logMessage;
+			if(this.function == Function.MULTICAST){
+				timeStampedLog.destination = "Group" + timeStampedLog.groupNo;
+				timeStampedLog.multicast = true;
+			}
 			sendingLog = new TimeStampedMessage("logger", "log" + event, timeStampedLog, null);
 			if (this.clockType == ClockType.LOGICAL) {
 				sendingLog.setLogicalTimeStamps(((LogicalClock) this.clockService).internalLogicalClock);
@@ -971,5 +980,5 @@ enum ProcessNo {
 }
 
 enum Function {
-	SEND, RECEIVE, RETRIEVE, PRINTSTAMP;
+	SEND, RECEIVE, RETRIEVE, PRINTSTAMP, MULTICAST;
 }

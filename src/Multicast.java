@@ -12,9 +12,7 @@ public class Multicast {
 	HashMap<Integer, ArrayList<String>> groupMap = new HashMap<>();
 	HashMap<Integer, Integer[]> vectorMap = new HashMap<>();
 	MessagePasser messagePasser;
-//	LinkedList<Message> holdBackList;
 	ArrayList<LinkedList<Message>> holdBackQueueList = new ArrayList<>();
-//	ArrayList<Message> multicastSendingBuffer = new ArrayList<>();
 	ArrayList<ArrayList<Message>> sendingBufferList = new ArrayList<>();
 
 	public Multicast(MessagePasser messagePasser){
@@ -50,6 +48,7 @@ public class Multicast {
 
 	public void send(Message message) throws IOException, InterruptedException{
 		int groupNo = message.getGroupNo();
+		messagePasser.function = Function.MULTICAST;
 		//b-multicast:
 		System.out.println("INFO: vector map: " + vectorMap.toString());
 		System.out.println("INFO: group number: " + message.getGroupNo());

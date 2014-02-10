@@ -170,6 +170,12 @@ class Metadata {
 	String msgAction;
 
 	boolean msgDup;
+	
+	int groupNo;
+	
+	boolean isMulticast;
+
+	int[] multicastVector;
 
 	public Metadata(Message logMsg) {
 		this.msgSrc = logMsg.source;
@@ -178,10 +184,13 @@ class Metadata {
 		this.msgSeqNo = logMsg.sequenceNumber;
 		this.msgAction = logMsg.action;
 		this.msgDup = logMsg.duplicate;
+		this.groupNo = logMsg.groupNo;
+		this.isMulticast = logMsg.multicast;
+		this.multicastVector = logMsg.multicastVector;
 	}
 
 	public String toString() {
-		return "[msgSrc=" + msgSrc + "; msgDst=" + msgDst + "; msgKind=" + msgKind + "; msgSeqNo=" + msgSeqNo + "; msgAction=" + msgAction + "; msgDup=" + msgDup + "]";
+		return "[msgSrc=" + msgSrc + "; msgDst=" + msgDst + "; msgKind=" + msgKind + "; msgSeqNo=" + msgSeqNo + "; msgAction=" + msgAction + "; multicast=" + isMulticast + "; msgDup=" + msgDup + "]";
 	}
 }
 
